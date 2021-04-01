@@ -27,8 +27,9 @@ class SqlSchemasSheet(Sheet):
             except Exception as e:
                 r = e
             self.rows.append(r)
-
-SqlSchemasSheet.addCommand(ENTER, 'dive-row', 'vd.push(SqlTablesSheet(schema=cursorRow[0], db=db))', 'open sql schema in current row')
+    
+    def openRow(self, row):
+        return SqlTablesSheet(schema=row[0], db=self.db)
 
 
 class SqlTablesSheet(Sheet):
@@ -36,7 +37,6 @@ class SqlTablesSheet(Sheet):
     columns = [
             Column('table_name', type = str, getter = lambda col,row: row.tableName),
             Column('column_count', type = int, getter = lambda col,row: row.col_count),
-            Column('row_count', type = int, getter = lambda col,row: row.row_count)
             ]
 
     @asyncthread
@@ -49,9 +49,10 @@ class SqlTablesSheet(Sheet):
                 r = table(sqlTable = itable, db = self.db)
             except Exception as e:
                 r = e
-            self.rows.append(r)
+            self.addRow(r)
 
-SqlTablesSheet.addCommand(ENTER, 'dive-row', 'vd.push(SqlSheet(table=cursorRow))', 'open sql table in current row')
+    def openRow(self, row):
+        return SqlSchemasSheet(table=row)
 
 
 class SqlSheet(Sheet):
@@ -60,7 +61,9 @@ class SqlSheet(Sheet):
     @asyncthread
     def reload(self):
         from sqlalchemy import select
-        self.columns = self.table.gen_sheet_cols()
+        self.columns = []
+        for c in self.table.gen_sheet_cols():
+            self.addColumn(c)
 
         self.rows = []
 
@@ -77,7 +80,7 @@ class table:
         self.tableName = sqlTable.name
         self.db = db
         self.col_count = self.get_column_count()
-        self.row_count = self.get_row_count()
+        #self.row_count = self.get_row_count()
 
     def get_column_count(self):
         return len(self.sqlTable.columns)
